@@ -3,13 +3,14 @@
  * SPDX-License-Identifier: MIT
  * ---------------------------------------------------------------------
  * File: wishbone_interconnect.sv
+ *
+ * Modified by: Md. Monjurul Islam
+ * Organization: Alpha Science Lab
  */
-
-
 
 module wishbone_interconnect #(
     parameter int NUM_SLAVES,
-    //parameter int MAX_PIPELINE_DEPTH = 1,
+    // parameter int MAX_PIPELINE_DEPTH = 1,
     parameter bit [32*NUM_SLAVES-1:0] SLAVE_ADDRESS,
     parameter bit [32*NUM_SLAVES-1:0] SLAVE_SIZE
 ) (
@@ -63,8 +64,8 @@ module wishbone_interconnect #(
 
     for (genvar slave = 0; slave < NUM_SLAVES; slave++) begin
         assign masked_dat_miso[slave] = select[slave] ? slaves[slave].dat_miso : 0;
-        assign masked_ack[slave] = select[slave] && slaves[slave].ack;
-        assign masked_err[slave] = select[slave] && slaves[slave].err;
+        assign masked_ack[slave]      = select[slave] && slaves[slave].ack;
+        assign masked_err[slave]      = select[slave] && slaves[slave].err;
     end
 
     // Signals to master
@@ -81,16 +82,17 @@ module wishbone_interconnect #(
     assign err = |masked_err || invalid_address || timeout;
 
     assign master.dat_miso = dat_miso;
-    assign master.ack = ack;
-    assign master.err = err;
+    assign master.ack      = ack;
+    assign master.err      = err;
 
     // Signals from master to slave
     for (genvar slave = 0; slave < NUM_SLAVES; slave++) begin
-        assign slaves[slave].cyc = master.cyc;
-        assign slaves[slave].stb = master.stb && select[slave];
-        assign slaves[slave].adr = master.adr;
-        assign slaves[slave].sel = master.sel;
-        assign slaves[slave].we = master.we;
+        assign slaves[slave].cyc      = master.cyc;
+        assign slaves[slave].stb      = master.stb && select[slave];
+        assign slaves[slave].adr      = master.adr;
+        assign slaves[slave].sel      = master.sel;
+        assign slaves[slave].we       = master.we;
         assign slaves[slave].dat_mosi = master.dat_mosi;
     end
+
 endmodule
