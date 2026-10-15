@@ -31,6 +31,8 @@ module Titan(
         rst <= buttons[0];
     end
 
+    logic [15:0] rst_out;
+
     for (genvar i = 0; i < 5; i++) begin : button_conditioning
         synchronizer button_sync(
             .clk(clk),
@@ -101,7 +103,7 @@ module Titan(
         .HART_ID(32'h1)
     ) core1 (
         .clk(clk),
-        .rst(rst),
+        .rst(rst_out[1]),
         .memory_fetch_port(bus_masters[5].master),
         .memory_mem_port(bus_masters[1].master),
         .external_interrupt_in(test_interrupt[1]),
@@ -113,7 +115,7 @@ module Titan(
         .HART_ID(32'h2)
     ) core2 (
         .clk(clk),
-        .rst(rst),
+        .rst(rst_out[2]),
         .memory_fetch_port(bus_masters[6].master),
         .memory_mem_port(bus_masters[2].master),
         .external_interrupt_in(test_interrupt[2]), 
@@ -125,7 +127,7 @@ module Titan(
         .HART_ID(32'h3)
     ) core3 (
         .clk(clk),
-        .rst(rst),
+        .rst(rst_out[3]),
         .memory_fetch_port(bus_masters[7].master),
         .memory_mem_port(bus_masters[3].master),
         .external_interrupt_in(test_interrupt[3]), 
@@ -239,6 +241,16 @@ module Titan(
         .rst(rst),
         .interrupt(test_interrupt),
         .wishbone(slaves[9].slave)
+    );
+
+    proloy_wb_rst #(
+        .ADDRESS(RST_CTRL_START),
+        .SIZE(RST_CTRL_SIZE)
+    ) rst_ctrl (
+        .clk(clk),
+        .rst(rst),
+        .wishbone(slaves[10].slave),
+        .rst_out(rst_out)
     );
 
 endmodule

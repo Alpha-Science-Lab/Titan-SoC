@@ -43,6 +43,9 @@ package constants;
     localparam bit [31:0] TEST_START = 32'h0012_0000;
     localparam bit [31:0] TEST_SIZE  = 32'h0000_0009;
 
+    localparam bit [31:0] RST_CTRL_START = 32'h0012_0100;
+    localparam bit [31:0] RST_CTRL_SIZE  = 32'h0000_0001;
+
     // --------------------------------------------------------------------------------------------
     // |                                    Address Constants                                     |
     // --------------------------------------------------------------------------------------------
