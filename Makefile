@@ -29,6 +29,7 @@ VIVADO 			  ?= $(XILINX_VIVADO)/bin/vivado
 GOWIN_SH    	  ?= LD_LIBRARY_PATH=/tools/gowin_eda/IDE/lib QT_QPA_PLATFORM=offscreen DISPLAY= gw_sh
 GOWIN_PLL   	  = gowin_pll
 
+SIM_TOP           ?= top
 BOOTLOADER        ?= bootloader
 M_EXT             ?= 0
 
@@ -144,16 +145,16 @@ del_mem_inits:
 ################################################################################
 
 # Include dependency file (if it exists)
--include $(BUILD_DIR)/$(SIM_DIR)/top__ver.d
+-include $(BUILD_DIR)/$(SIM_DIR)/$(SIM_TOP)__ver.d
 
 # Verilate simulation
-$(BUILD_DIR)/$(SIM_DIR)/top.mk:
+$(BUILD_DIR)/$(SIM_DIR)/$(SIM_TOP).mk:
 	@ mkdir -p $(BUILD_DIR)/$(SIM_DIR)
-	$(VERILATOR) $(VERILATOR_FLAGS) --trace-fst --trace-structs --timing --assert --main --exe --prefix top -Mdir $(BUILD_DIR)/$(SIM_DIR) --top-module top sim/top.sv
+	$(VERILATOR) $(VERILATOR_FLAGS) --trace-fst --trace-structs --timing --assert --main --exe --prefix $(SIM_TOP) -Mdir $(BUILD_DIR)/$(SIM_DIR) --top-module $(SIM_TOP) sim/$(SIM_TOP).sv
 
 # Build simulation executable
-$(BUILD_DIR)/$(SIM_DIR)/top: $(BUILD_DIR)/$(SIM_DIR)/top.mk
-	$(MAKE) -C $(BUILD_DIR)/$(SIM_DIR) -f top.mk
+$(BUILD_DIR)/$(SIM_DIR)/$(SIM_TOP): $(BUILD_DIR)/$(SIM_DIR)/$(SIM_TOP).mk
+	$(MAKE) -C $(BUILD_DIR)/$(SIM_DIR) -f $(SIM_TOP).mk
 
 ################################################################################
 #                                Assembly Tests                                #
@@ -179,8 +180,8 @@ $(BUILD_DIR)/$(ASM_DIR)/%/init.mem: $(BUILD_DIR)/$(ASM_DIR)/%/init.bin
 
 # Run test
 .PHONY: $(ASM_TEST_NAMES)
-$(ASM_TEST_NAMES): $(ASM_DIR)/%: $(BUILD_DIR)/$(ASM_DIR)/%/init.mem $(BUILD_DIR)/$(SIM_DIR)/top
-	cd $(BUILD_DIR)/$(ASM_DIR)/$* && $(CURDIR)/$(BUILD_DIR)/$(SIM_DIR)/top
+$(ASM_TEST_NAMES): $(ASM_DIR)/%: $(BUILD_DIR)/$(ASM_DIR)/%/init.mem $(BUILD_DIR)/$(SIM_DIR)/$(SIM_TOP)
+	cd $(BUILD_DIR)/$(ASM_DIR)/$* && $(CURDIR)/$(BUILD_DIR)/$(SIM_DIR)/$(SIM_TOP)
 	@echo 'gtkwave $(BUILD_DIR)/$(ASM_DIR)/$*/sim.fst $(SAVES_DIR)/pipeline.gtkw' > $(BUILD_DIR)/show.sh
 
 ################################################################################
@@ -227,8 +228,8 @@ $(BUILD_DIR)/$(C_DIR)/%/out.dis: $(BUILD_DIR)/$(C_DIR)/%/out.elf
 
 # Run test
 .PHONY: $(C_TEST_NAMES)
-$(C_TEST_NAMES): $(C_DIR)/%: $(BUILD_DIR)/$(C_DIR)/%/init.mem $(BUILD_DIR)/$(C_DIR)/%/out.hex $(BUILD_DIR)/$(C_DIR)/%/out.elf $(BUILD_DIR)/$(C_DIR)/%/out.dis $(BUILD_DIR)/$(SIM_DIR)/top
-	cd $(BUILD_DIR)/$(C_DIR)/$* && $(CURDIR)/$(BUILD_DIR)/$(SIM_DIR)/top
+$(C_TEST_NAMES): $(C_DIR)/%: $(BUILD_DIR)/$(C_DIR)/%/init.mem $(BUILD_DIR)/$(C_DIR)/%/out.hex $(BUILD_DIR)/$(C_DIR)/%/out.elf $(BUILD_DIR)/$(C_DIR)/%/out.dis $(BUILD_DIR)/$(SIM_DIR)/$(SIM_TOP)
+	cd $(BUILD_DIR)/$(C_DIR)/$* && $(CURDIR)/$(BUILD_DIR)/$(SIM_DIR)/$(SIM_TOP)
 	@echo 'gtkwave $(BUILD_DIR)/$(C_DIR)/$*/sim.fst $(SAVES_DIR)/pipeline.gtkw' > $(BUILD_DIR)/show.sh
 
 ################################################################################
@@ -247,22 +248,22 @@ SV_TESTS = $(wildcard $(SV_DIR)/*.sv)
 SV_TEST_NAMES = $(patsubst $(SV_DIR)/%.sv, $(SV_DIR)/%, $(SV_TESTS))
 
 # Include dependency files (if they exist)
--include $(wildcard $(BUILD_DIR)/$(SV_DIR)/*/top__ver.d)
+-include $(wildcard $(BUILD_DIR)/$(SV_DIR)/*/$(SIM_TOP)__ver.d)
 
 # Run test bench
 .PHONY: $(SV_TEST_NAMES)
-$(SV_TEST_NAMES): $(SV_DIR)/%: $(BUILD_DIR)/$(SV_DIR)/%/top
-	cd $(BUILD_DIR)/$(SV_DIR)/$* && $(CURDIR)/$(BUILD_DIR)/$(SV_DIR)/$*/top
+$(SV_TEST_NAMES): $(SV_DIR)/%: $(BUILD_DIR)/$(SV_DIR)/%/$(SIM_TOP)
+	cd $(BUILD_DIR)/$(SV_DIR)/$* && $(CURDIR)/$(BUILD_DIR)/$(SV_DIR)/$*/$(SIM_TOP)
 
 # Build system verilog executable
-$(BUILD_DIR)/$(SV_DIR)/%/top: $(BUILD_DIR)/$(SV_DIR)/%/top.mk
-	$(MAKE) -j -C $(BUILD_DIR)/$(SV_DIR)/$* -f top.mk
+$(BUILD_DIR)/$(SV_DIR)/%/$(SIM_TOP): $(BUILD_DIR)/$(SV_DIR)/%/$(SIM_TOP).mk
+	$(MAKE) -j -C $(BUILD_DIR)/$(SV_DIR)/$* -f $(SIM_TOP).mk
 
 # Verilate system verilog testbench
-$(BUILD_DIR)/$(SV_DIR)/%/top.mk:
+$(BUILD_DIR)/$(SV_DIR)/%/$(SIM_TOP).mk:
 	@ mkdir -p $(BUILD_DIR)/$(SV_DIR)/$*
-	$(VERILATOR) $(VERILATOR_FLAGS) -f $(SV_DIR)/files.txt --trace-fst --trace-structs --timing --assert --main --exe --prefix top -Mdir $(BUILD_DIR)/$(SV_DIR)/$* --top-module $* $(SV_DIR)/$*.sv
-	@echo 'gtkwave $(BUILD_DIR)/$(SV_DIR)/$*/$*.fst $(SAVES_DIR)/$*.gtkw' > $(BUILD_DIR)/show.sh
+	$(VERILATOR) $(VERILATOR_FLAGS) -f $(SV_DIR)/files.txt --trace-fst --trace-structs --timing --assert --main --exe --prefix $(SIM_TOP) -Mdir $(BUILD_DIR)/$(SV_DIR)/$* --top-module $* $(SV_DIR)/$*.sv
+	@echo 'gtkwave $(BUILD_DIR)/$(SV_DIR)/$*/$(SIM_TOP).fst $(SAVES_DIR)/$*.gtkw' > $(BUILD_DIR)/show.sh
 
 ################################################################################
 #                                   Waveform                                   #
