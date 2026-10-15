@@ -28,12 +28,6 @@ While Hadi-V provides the single-core processing foundation, AlphaTitan focuses 
 
 The project aims to develop practical experience in multicore architecture, hardware integration, and SoC design while contributing to the growth of indigenous deep-technology capabilities in Bangladesh.
 
-### Project Lineage
-
-- **HaDes-V:** The original open educational resource developed by researchers at Graz University of Technology.
-- **Hadi-V:** An in-house-developed, five-stage, single-core RISC-V processor derived from the HaDes-V educational framework.
-- **AlphaTitan:** A quad-core RISC-V SoC built upon Hadi-V, with system-level architectural inspiration from OpenTitan.
-
 ---
 
 ## Core and System Specifications
@@ -44,17 +38,15 @@ The project aims to develop practical experience in multicore architecture, hard
 - Machine-mode support
 - Five-stage scalar pipeline
 - Dynamic branch prediction
-- Modular and extensible RTL design
+- Modular and extensible
 
 ### SoC — AlphaTitan
 
 - Four Hadi-V processor cores
-- RISC-V-based multicore architecture
+- Multicore RISC-V architecture
 - System-level design inspired by OpenTitan
 - Integration of multiple processor cores into a unified SoC
 - A platform for investigating multicore execution and shared hardware resources
-
-*Note: Shared memory organization, interconnect topology, cache coherence, interrupt distribution, and synchronization mechanisms depend on the implemented SoC design. These features should be documented as they are implemented and verified.*
 
 ---
 
@@ -63,13 +55,13 @@ The project aims to develop practical experience in multicore architecture, hard
 - **Processor Core:** Hadi-V's initial design phase completed.
 - **Core Verification:** Hadi-V functionally verified using the verification platform provided by Graz University of Technology.
 - **FPGA Deployment:** Hadi-V successfully deployed on the Tang Nano9K FPGA board.
-- **Multicore SoC:** Alpha Titan builds upon the Hadi-V core to develop a four-core system. SoC-level verification and FPGA deployment status should be updated as development progresses.
+- **Multicore SoC:** AlphaTitan builds upon the Hadi-V core to develop a quad-core system. SoC-level verification and FPGA deployment status shall be updated as development progresses.
 
 ---
 
 ## Design Philosophy
 
-Alpha Titan represents an effort to move beyond standalone processor design toward complete system-on-chip engineering.
+AlphaTitan represents an effort to move beyond standalone processor design toward complete system-on-chip engineering.
 
 The project explores the challenges involved in integrating multiple processor cores into a unified system, including:
 
@@ -80,7 +72,7 @@ The project explores the challenges involved in integrating multiple processor c
 - Hardware verification and system-level debugging
 - FPGA-based prototyping and hardware realization
 
-Inspired by OpenTitan's system-level architectural approach, Alpha Titan serves as an educational and research platform for understanding how processor cores become part of a larger computing system.
+Inspired by OpenTitan's system-level architectural approach, AlphaTitan serves as an educational and research platform for understanding how processor cores become part of a larger computing system.
 
 Our broader objective is to strengthen local expertise in processor architecture, VLSI, and SoC design, contributing to the development of Bangladesh's indigenous semiconductor and deep-technology ecosystem.
 
@@ -88,7 +80,7 @@ Our broader objective is to strengthen local expertise in processor architecture
 
 ## Getting Started
 
-This section describes the basic workflow for setting up the development environment, running simulations, and synthesizing the design. The commands below reflect the inherited Hadi-V build flow; Alpha Titan's multicore targets may require additional configuration.
+This section describes the basic workflow for setting up the development environment, running simulations, and synthesizing the design. The commands below reflect the inherited Hadi-V build flow; AlphaTitan's multicore targets may require additional configuration.
 
 ### 1. Prerequisites
 
@@ -123,7 +115,7 @@ make test/c/<test_name>
 
 These targets compile the program, generate memory initialization files, and run the simulation using Verilator.
 
-Check the repository's test configuration to determine whether a given test targets a single Hadi-V core or the complete Alpha Titan SoC.
+Check the repository's test configuration to determine whether a given test targets a single Hadi-V core or the complete AlphaTitan SoC.
 
 ### 5. View Waveforms
 
@@ -149,7 +141,7 @@ Use the available testbenches to verify processor functionality and, where suppo
 make synthesis
 ```
 
-This invokes the configured Xilinx Vivado flow. Ensure that the selected top-level module, constraints, and synthesis configuration target Alpha Titan rather than the original single-core Hadi-V design.
+This invokes the configured Xilinx Vivado flow. Ensure that the selected top-level module, constraints, and synthesis configuration target AlphaTitan rather than the original single-core Hadi-V design.
 
 ### 8. Clean Build Files
 
