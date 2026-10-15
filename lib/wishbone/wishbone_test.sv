@@ -4,36 +4,37 @@
  * ---------------------------------------------------------------------
  * File: wishbone_test.sv
  *
- * Modified (add scratchpad register)
- * by Md. Jannatul Nayem
- * Org: Alpha Science Lab, April '26
+ * Modified (add scratchpad register, add +3 independent interrupt channels)
+ * Md. Jannatul Nayem
+ * Org: Alpha Science Lab, April '26, October '26
  */
 
 
 
  module wishbone_test #(
     parameter bit [31:0] ADDRESS,
-    parameter bit [31:0] SIZE = 6
+    parameter bit [31:0] SIZE = 9
 ) (
     input logic clk,
     input logic rst,
-
-    output logic interrupt,
-
+    output logic [3:0] interrupt,
     wishbone_interface.slave wishbone
 );
     /*
     Wishbone peripheral for CPU testing
     The following registers are provided:
-    - 0x00: Test register: Write to send a message to the testbench.
-            0x000: Passed test case
-            0x001: Failed test case
-            0x002: Halt simulation
-    - 0x01: Interrupt register: Down counter, triggers an interrupt when counter reaches 0
+    - 0x00: Test register: Write to send a message to the testbench
+            0x00: Passed test case
+            0x01: Failed test case
+            0x02: Halt simulation
+    - 0x01: Interrupt register0: Down counter, triggers an interrupt when counter reaches 0
     - 0x02: Counter register: Reads return an incrementing number, starting at 0
     - 0x03: Stall Acknowledge register: Reading and writing stall for 3 clock cycles before acknowledging
     - 0x04: Stall Error register: Reading and writing stall for 3 clock cycles before erroring
     - 0x05: Scratchpad register: General-purpose debug/error-cause register
+    - 0x06: Interrupt register1: Down counter, triggers an interrupt when counter reaches 0
+    - 0x07: Interrupt register2: Down counter, triggers an interrupt when counter reaches 0
+    - 0x08: Interrupt register3: Down counter, triggers an interrupt when counter reaches 0
     */
 
 
@@ -69,8 +70,8 @@
     end
 
     // Scratchpad register
-    // CPU can write extra debug/error-cause information here.
-    // Testbench can observe scratchpad_stb and scratchpad_reg through hierarchy.
+    // CPU can write extra debug/error-cause information here
+    // Testbench can observe scratchpad_stb and scratchpad_reg through hierarchy
 
     logic [31:0] scratchpad_reg;
     logic scratchpad_stb;
@@ -95,25 +96,59 @@
     end    
 
     // Interrupt register
-    
-    logic [31:0] interrupt_counter;
-    logic interrupt_enable;
-    logic interrupt_sel, interrupt_ack;
-    assign interrupt_sel = wishbone.cyc && wishbone.stb && offset == 1;
-    assign interrupt_ack = interrupt_sel;
-    assign interrupt = interrupt_enable && (interrupt_counter == 0);
+    // Keep the legacy register at offset 1 for backward compatibility
+    // Additional independent interrupt channels are exposed at offsets 6, 7, 8,
+    // while the legacy channel remains at interrupt[0]
+
+    logic [3:0] interrupt_enable;
+    logic [3:0] interrupt_sel;
+    logic interrupt_ack;
+
+    logic [3:0][31:0] interrupt_counter;
+
+    assign interrupt_sel[0] = wishbone.cyc && wishbone.stb && offset == 1;
+    assign interrupt_sel[1] = wishbone.cyc && wishbone.stb && offset == 6;
+    assign interrupt_sel[2] = wishbone.cyc && wishbone.stb && offset == 7;
+    assign interrupt_sel[3] = wishbone.cyc && wishbone.stb && offset == 8;
+    assign interrupt_ack = |interrupt_sel;
+
+    assign interrupt[0] = interrupt_enable[0] && (interrupt_counter[0] == 0);
+    assign interrupt[1] = interrupt_enable[1] && (interrupt_counter[1] == 0);
+    assign interrupt[2] = interrupt_enable[2] && (interrupt_counter[2] == 0);
+    assign interrupt[3] = interrupt_enable[3] && (interrupt_counter[3] == 0);
 
     always_ff @(posedge clk) begin
         if (rst) begin
-            interrupt_counter <= 0;
-            interrupt_enable <= 0;
-        end
-        else if (interrupt_ack && wishbone.we) begin
-            interrupt_counter <= wishbone.dat_mosi;
-            interrupt_enable <= (wishbone.dat_mosi > 0);
-        end
-        else if (interrupt_counter > 0) begin
-            interrupt_counter <= interrupt_counter - 1;
+            interrupt_counter <= '0;
+            interrupt_enable  <= '0;
+        end else begin
+            if (interrupt_sel[0] && wishbone.we) begin
+                interrupt_counter[0] <= wishbone.dat_mosi;
+                interrupt_enable[0]  <= (wishbone.dat_mosi > 0);
+            end else if (interrupt_counter[0] > 0) begin
+                interrupt_counter[0] <= interrupt_counter[0] - 1;
+            end
+
+            if (interrupt_sel[1] && wishbone.we) begin
+                interrupt_counter[1] <= wishbone.dat_mosi;
+                interrupt_enable[1]  <= (wishbone.dat_mosi > 0);
+            end else if (interrupt_counter[1] > 0) begin
+                interrupt_counter[1] <= interrupt_counter[1] - 1;
+            end
+
+            if (interrupt_sel[2] && wishbone.we) begin
+                interrupt_counter[2] <= wishbone.dat_mosi;
+                interrupt_enable[2]  <= (wishbone.dat_mosi > 0);
+            end else if (interrupt_counter[2] > 0) begin
+                interrupt_counter[2] <= interrupt_counter[2] - 1;
+            end
+
+            if (interrupt_sel[3] && wishbone.we) begin
+                interrupt_counter[3] <= wishbone.dat_mosi;
+                interrupt_enable[3]  <= (wishbone.dat_mosi > 0);
+            end else if (interrupt_counter[3] > 0) begin
+                interrupt_counter[3] <= interrupt_counter[3] - 1;
+            end
         end
     end
 
@@ -175,7 +210,10 @@
     logic wishbone_sel;
     assign wishbone_sel = |{
         test_sel,
-        interrupt_sel,
+        interrupt_sel[0],
+        interrupt_sel[1],
+        interrupt_sel[2],
+        interrupt_sel[3],
         counter_sel,
         stall_sel,
         error_sel,
@@ -196,9 +234,12 @@
     };
 
     assign wishbone.dat_miso =
-        interrupt_ack ? interrupt_counter :
+        interrupt_sel[0] ? interrupt_counter[0] :
+        interrupt_sel[1] ? interrupt_counter[1] :
+        interrupt_sel[2] ? interrupt_counter[2] :
+        interrupt_sel[3] ? interrupt_counter[3] :
         counter_ack ? counter :
         stall_ack ? stall_reg :
-        32'b0;
+        scratchpad_ack ? scratchpad_reg : 32'b0;
 
 endmodule

@@ -5,16 +5,19 @@
  * File: constants.sv
  */
 
-
-
 /*verilator lint_off UNUSED*/
 
 package constants;
     // --------------------------------------------------------------------------------------------
     // |                                   Wishbone Constants                                     |
     // --------------------------------------------------------------------------------------------
-    localparam bit [31:0] MEMORY_START = 32'h0001_0000;
+    localparam bit [31:0] MEMORY_START = 32'h0005_0000;
     localparam bit [31:0] MEMORY_SIZE  = 32'h0000_2000;
+
+    localparam bit [31:0] TCIM0_START  = 32'h0001_0000;
+    localparam bit [31:0] TCIM1_START  = 32'h0002_0000;
+    localparam bit [31:0] TCIM2_START  = 32'h0003_0000;
+    localparam bit [31:0] TCIM3_START  = 32'h0004_0000;
 
     localparam bit [31:0] LEDS_START = 32'h0008_0000;
     localparam bit [31:0] LEDS_SIZE  = 32'h0000_0001;
@@ -32,18 +35,21 @@ package constants;
     localparam bit [31:0] UART_SIZE  = 32'h0000_0001;
 
     localparam bit [31:0] TIMER_START = 32'h0008_5000;
-    localparam bit [31:0] TIMER_SIZE  = 32'h0000_0005;
+    localparam bit [31:0] TIMER_SIZE  = 32'h0000_000B;
 
     localparam bit [31:0] VGA_START = 32'h0009_0000;
     localparam bit [31:0] VGA_SIZE  = 32'h0000_9600; // 640 * 480 pixel with 4 bit color depth
 
     localparam bit [31:0] TEST_START = 32'h0012_0000;
-    localparam bit [31:0] TEST_SIZE  = 32'h0000_0006;
+    localparam bit [31:0] TEST_SIZE  = 32'h0000_0009;
 
     // --------------------------------------------------------------------------------------------
     // |                                    Address Constants                                     |
     // --------------------------------------------------------------------------------------------
-    localparam bit [31:0] RESET_ADDRESS = MEMORY_START << 2;
+    localparam bit [31:0] CPU0_RESET_VECTOR = TCIM0_START << 2;
+    localparam bit [31:0] CPU1_RESET_VECTOR = TCIM1_START << 2;
+    localparam bit [31:0] CPU2_RESET_VECTOR = TCIM2_START << 2;
+    localparam bit [31:0] CPU3_RESET_VECTOR = TCIM3_START << 2;
 
     // --------------------------------------------------------------------------------------------
     // |                                  Instruction Constants                                   |

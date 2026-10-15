@@ -1,18 +1,14 @@
-/* Copyright (c) 2026 Alpha Science Lab
- * SPDX-License-Identifier: MIT
- * ---------------------------------------------------------------------
- * File: aetherlink.sv
- * Author: Md. Mosharrof, Jubayer Fahad
- *
- * Multi-master Wishbone interconnect
- * - Arbitrates between NUM_MASTERS bus initiators (round-robin)
- * - Routes one granted master to NUM_SLAVES targets
- * - Preserves existing address/size decode style
- */
+/*
+ File: aetherlink.sv
+ Multi-master Wishbone interconnect
+ Organization: Alpha Science Lab
+ October 2026
+ Author: Md. Mosharrof, Jubayer Fahad
+*/
 
 module aetherlink #(
     parameter int NUM_MASTERS = 4,
-    parameter int NUM_SLAVES,
+    parameter int NUM_SLAVES = 16,
     parameter bit [32*NUM_SLAVES-1:0] SLAVE_ADDRESS,
     parameter bit [32*NUM_SLAVES-1:0] SLAVE_SIZE
 ) (

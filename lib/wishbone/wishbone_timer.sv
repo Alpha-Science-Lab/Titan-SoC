@@ -3,20 +3,21 @@
  * SPDX-License-Identifier: MIT
  * ---------------------------------------------------------------------
  * File: wishbone_timer.sv
+ *
+ * Modified (add +3 independent timer channels)
+ * Md Monjurul Islam
+ * Organization: Alpha Science Lab, October '26
  */
-
 
 
 module wishbone_timer #(
     parameter bit [31:0] ADDRESS,
-    parameter bit [31:0] SIZE = 5,
+    parameter bit [31:0] SIZE = 32'hB, //11
     parameter bit [31:0] CLK_FREQUENCY_MHZ
 ) (
     input logic clk,
     input logic rst,
-
-    output logic interrupt,
-
+    output logic [3:0] interrupt,
     wishbone_interface.slave wishbone
 );
 
@@ -71,16 +72,28 @@ module wishbone_timer #(
     // |                                         Registers                                        |
     // --------------------------------------------------------------------------------------------
 
-    // ADDRESS+0: machine time control and status
-    // ADDRESS+1: mtime
-    // ADDRESS+2: mtimeh
-    // ADDRESS+3: mtimecmp
-    // ADDRESS+4: mtimecmph
+    // ADDRESS+0  : machine time control and status
+    // ADDRESS+1  : mtime
+    // ADDRESS+2  : mtimeh
+    // ADDRESS+3  : mtimecmp[0]
+    // ADDRESS+4  : mtimecmph[0]
+    // ADDRESS+5  : mtimecmp[1]
+    // ADDRESS+6  : mtimecmph[1]
+    // ADDRESS+7  : mtimecmp[2]
+    // ADDRESS+8  : mtimecmph[2]
+    // ADDRESS+9  : mtimecmp[3]
+    // ADDRESS+10 : mtimecmph[3]
     localparam ADDRESS_MTIMESTATUS = (ADDRESS+0);
     localparam ADDRESS_MTIME       = (ADDRESS+1);
     localparam ADDRESS_MTIMEH      = (ADDRESS+2);
-    localparam ADDRESS_MTIMECMP    = (ADDRESS+3);
-    localparam ADDRESS_MTIMECMPH   = (ADDRESS+4);
+    localparam ADDRESS_MTIMECMP0   = (ADDRESS+3);
+    localparam ADDRESS_MTIMECMP0H  = (ADDRESS+4);
+    localparam ADDRESS_MTIMECMP1   = (ADDRESS+5);
+    localparam ADDRESS_MTIMECMP1H  = (ADDRESS+6);
+    localparam ADDRESS_MTIMECMP2   = (ADDRESS+7);
+    localparam ADDRESS_MTIMECMP2H  = (ADDRESS+8);
+    localparam ADDRESS_MTIMECMP3   = (ADDRESS+9);
+    localparam ADDRESS_MTIMECMP3H  = (ADDRESS+10);
 
     // --------------------------------- TIMER CONTROL AND STATUS ---------------------------------
     /*
@@ -119,24 +132,60 @@ module wishbone_timer #(
     end
 
     // ----------------------------------------- MTIMECMP -----------------------------------------
-    logic [63:0] mtimecmp;
+    logic [3:0][63:0] mtimecmp;
     always_ff @(posedge clk) begin
         if (rst) begin
-            mtimecmp <= 0;
+            mtimecmp <= '0;
         end
         else begin
-            // handle write access to register
-            if (wishbone.adr == ADDRESS_MTIMECMP) begin
-                if (wb_write_sel[0] == 1) begin mtimecmp[ 7: 0] <= wb_dat_mosi[ 7: 0]; end
-                if (wb_write_sel[1] == 1) begin mtimecmp[15: 8] <= wb_dat_mosi[15: 8]; end
-                if (wb_write_sel[2] == 1) begin mtimecmp[23:16] <= wb_dat_mosi[23:16]; end
-                if (wb_write_sel[3] == 1) begin mtimecmp[31:24] <= wb_dat_mosi[31:24]; end
+            // handle write access to compare registers
+            if      (wishbone.adr == ADDRESS_MTIMECMP0) begin
+                if (wb_write_sel[0] == 1) begin mtimecmp[0][ 7: 0] <= wb_dat_mosi[ 7: 0]; end
+                if (wb_write_sel[1] == 1) begin mtimecmp[0][15: 8] <= wb_dat_mosi[15: 8]; end
+                if (wb_write_sel[2] == 1) begin mtimecmp[0][23:16] <= wb_dat_mosi[23:16]; end
+                if (wb_write_sel[3] == 1) begin mtimecmp[0][31:24] <= wb_dat_mosi[31:24]; end
             end
-            else if (wishbone.adr == ADDRESS_MTIMECMPH) begin
-                if (wb_write_sel[0] == 1) begin mtimecmp[39:32] <= wb_dat_mosi[ 7: 0]; end
-                if (wb_write_sel[1] == 1) begin mtimecmp[47:40] <= wb_dat_mosi[15: 8]; end
-                if (wb_write_sel[2] == 1) begin mtimecmp[55:48] <= wb_dat_mosi[23:16]; end
-                if (wb_write_sel[3] == 1) begin mtimecmp[63:56] <= wb_dat_mosi[31:24]; end
+            else if (wishbone.adr == ADDRESS_MTIMECMP0H) begin
+                if (wb_write_sel[0] == 1) begin mtimecmp[0][39:32] <= wb_dat_mosi[ 7: 0]; end
+                if (wb_write_sel[1] == 1) begin mtimecmp[0][47:40] <= wb_dat_mosi[15: 8]; end
+                if (wb_write_sel[2] == 1) begin mtimecmp[0][55:48] <= wb_dat_mosi[23:16]; end
+                if (wb_write_sel[3] == 1) begin mtimecmp[0][63:56] <= wb_dat_mosi[31:24]; end
+            end
+            else if (wishbone.adr == ADDRESS_MTIMECMP1) begin
+                if (wb_write_sel[0] == 1) begin mtimecmp[1][ 7: 0] <= wb_dat_mosi[ 7: 0]; end
+                if (wb_write_sel[1] == 1) begin mtimecmp[1][15: 8] <= wb_dat_mosi[15: 8]; end
+                if (wb_write_sel[2] == 1) begin mtimecmp[1][23:16] <= wb_dat_mosi[23:16]; end
+                if (wb_write_sel[3] == 1) begin mtimecmp[1][31:24] <= wb_dat_mosi[31:24]; end
+            end
+            else if (wishbone.adr == ADDRESS_MTIMECMP1H) begin
+                if (wb_write_sel[0] == 1) begin mtimecmp[1][39:32] <= wb_dat_mosi[ 7: 0]; end
+                if (wb_write_sel[1] == 1) begin mtimecmp[1][47:40] <= wb_dat_mosi[15: 8]; end
+                if (wb_write_sel[2] == 1) begin mtimecmp[1][55:48] <= wb_dat_mosi[23:16]; end
+                if (wb_write_sel[3] == 1) begin mtimecmp[1][63:56] <= wb_dat_mosi[31:24]; end
+            end
+            else if (wishbone.adr == ADDRESS_MTIMECMP2) begin
+                if (wb_write_sel[0] == 1) begin mtimecmp[2][ 7: 0] <= wb_dat_mosi[ 7: 0]; end
+                if (wb_write_sel[1] == 1) begin mtimecmp[2][15: 8] <= wb_dat_mosi[15: 8]; end
+                if (wb_write_sel[2] == 1) begin mtimecmp[2][23:16] <= wb_dat_mosi[23:16]; end
+                if (wb_write_sel[3] == 1) begin mtimecmp[2][31:24] <= wb_dat_mosi[31:24]; end
+            end
+            else if (wishbone.adr == ADDRESS_MTIMECMP2H) begin
+                if (wb_write_sel[0] == 1) begin mtimecmp[2][39:32] <= wb_dat_mosi[ 7: 0]; end
+                if (wb_write_sel[1] == 1) begin mtimecmp[2][47:40] <= wb_dat_mosi[15: 8]; end
+                if (wb_write_sel[2] == 1) begin mtimecmp[2][55:48] <= wb_dat_mosi[23:16]; end
+                if (wb_write_sel[3] == 1) begin mtimecmp[2][63:56] <= wb_dat_mosi[31:24]; end
+            end
+            else if (wishbone.adr == ADDRESS_MTIMECMP3) begin
+                if (wb_write_sel[0] == 1) begin mtimecmp[3][ 7: 0] <= wb_dat_mosi[ 7: 0]; end
+                if (wb_write_sel[1] == 1) begin mtimecmp[3][15: 8] <= wb_dat_mosi[15: 8]; end
+                if (wb_write_sel[2] == 1) begin mtimecmp[3][23:16] <= wb_dat_mosi[23:16]; end
+                if (wb_write_sel[3] == 1) begin mtimecmp[3][31:24] <= wb_dat_mosi[31:24]; end
+            end
+            else if (wishbone.adr == ADDRESS_MTIMECMP3H) begin
+                if (wb_write_sel[0] == 1) begin mtimecmp[3][39:32] <= wb_dat_mosi[ 7: 0]; end
+                if (wb_write_sel[1] == 1) begin mtimecmp[3][47:40] <= wb_dat_mosi[15: 8]; end
+                if (wb_write_sel[2] == 1) begin mtimecmp[3][55:48] <= wb_dat_mosi[23:16]; end
+                if (wb_write_sel[3] == 1) begin mtimecmp[3][63:56] <= wb_dat_mosi[31:24]; end
             end
         end
     end
@@ -176,11 +225,17 @@ module wishbone_timer #(
                     wishbone.err <= 0;
                     if (wishbone.we == 0) begin
                         // read
-                        if      (wishbone.adr == ADDRESS_MTIMESTATUS) begin wishbone.dat_miso <= mtime_status; end
-                        else if (wishbone.adr == ADDRESS_MTIME)       begin wishbone.dat_miso <= mtime[31: 0]; end
-                        else if (wishbone.adr == ADDRESS_MTIMEH)      begin wishbone.dat_miso <= mtime[63:32]; end
-                        else if (wishbone.adr == ADDRESS_MTIMECMP)    begin wishbone.dat_miso <= mtimecmp[31: 0]; end
-                        else if (wishbone.adr == ADDRESS_MTIMECMPH)   begin wishbone.dat_miso <= mtimecmp[63:32]; end
+                        if      (wishbone.adr == ADDRESS_MTIMESTATUS)  begin wishbone.dat_miso <= mtime_status; end
+                        else if (wishbone.adr == ADDRESS_MTIME)        begin wishbone.dat_miso <= mtime[31: 0]; end
+                        else if (wishbone.adr == ADDRESS_MTIMEH)       begin wishbone.dat_miso <= mtime[63:32]; end
+                        else if (wishbone.adr == ADDRESS_MTIMECMP0)    begin wishbone.dat_miso <= mtimecmp[0][31: 0]; end
+                        else if (wishbone.adr == ADDRESS_MTIMECMP0H)   begin wishbone.dat_miso <= mtimecmp[0][63:32]; end
+                        else if (wishbone.adr == ADDRESS_MTIMECMP1)    begin wishbone.dat_miso <= mtimecmp[1][31: 0]; end
+                        else if (wishbone.adr == ADDRESS_MTIMECMP1H)   begin wishbone.dat_miso <= mtimecmp[1][63:32]; end
+                        else if (wishbone.adr == ADDRESS_MTIMECMP2)    begin wishbone.dat_miso <= mtimecmp[2][31: 0]; end
+                        else if (wishbone.adr == ADDRESS_MTIMECMP2H)   begin wishbone.dat_miso <= mtimecmp[2][63:32]; end
+                        else if (wishbone.adr == ADDRESS_MTIMECMP3)    begin wishbone.dat_miso <= mtimecmp[3][31: 0]; end
+                        else if (wishbone.adr == ADDRESS_MTIMECMP3H)   begin wishbone.dat_miso <= mtimecmp[3][63:32]; end
                         else                                          begin wishbone.dat_miso <= 0; end // can not happen because of previous address check
                     end
                 end
@@ -196,6 +251,9 @@ module wishbone_timer #(
     // |                                          Output                                          |
     // --------------------------------------------------------------------------------------------
 
-    assign interrupt = (mtime >= mtimecmp);
+    assign interrupt[0] = (mtime >= mtimecmp[0]);
+    assign interrupt[1] = (mtime >= mtimecmp[1]);
+    assign interrupt[2] = (mtime >= mtimecmp[2]);
+    assign interrupt[3] = (mtime >= mtimecmp[3]);
 
 endmodule

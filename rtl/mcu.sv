@@ -106,7 +106,7 @@ module mcu #(
 
     // Instantiate CPU
     Hadi_V #(
-        .RESET_VECTOR(constants::RESET_ADDRESS),
+        .RESET_VECTOR(constants::CPU0_RESET_VECTOR),
         .HART_ID(32'h0)
     ) cpu (
         .clk(clk),
@@ -126,7 +126,7 @@ module mcu #(
     wishbone_interconnect #(
         .NUM_SLAVES(9),
         .SLAVE_ADDRESS({
-            MEMORY_START,
+            TCIM0_START,
             LEDS_START,
             BUTTONS_START,
             SWITCHES_START,
@@ -155,7 +155,7 @@ module mcu #(
     );
 
     wishbone_ram #(
-        .ADDRESS(MEMORY_START),
+        .ADDRESS(TCIM0_START),
         .SIZE(MEMORY_SIZE),
         .INIT_FILE("init.mem")
     ) ram (

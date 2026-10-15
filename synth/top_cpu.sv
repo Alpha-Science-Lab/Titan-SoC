@@ -46,7 +46,7 @@ module top_cpu(
     (* DONT_TOUCH = "TRUE" *)
     
     Hadi_V #(
-        .RESET_VECTOR(constants::RESET_ADDRESS),
+        .RESET_VECTOR(constants::CPU0_RESET_VECTOR),
         .HART_ID(32'h0) 
     ) cpu_i (
         .clk(clk),
