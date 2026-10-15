@@ -105,7 +105,10 @@ module mcu #(
     };
 
     // Instantiate CPU
-    Hadi_V cpu(
+    Hadi_V #(
+        .RESET_VECTOR(constants::RESET_ADDRESS),
+        .HART_ID(32'h0)
+    ) cpu (
         .clk(clk),
         .rst(rst),
         .memory_fetch_port(fetch_bus.master),
@@ -153,7 +156,8 @@ module mcu #(
 
     wishbone_ram #(
         .ADDRESS(MEMORY_START),
-        .SIZE(MEMORY_SIZE)
+        .SIZE(MEMORY_SIZE),
+        .INIT_FILE("init.mem")
     ) ram (
         .clk(clk_mem),
         .rst(rst),
