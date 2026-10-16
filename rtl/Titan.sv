@@ -63,24 +63,24 @@ module Titan #(
 
     // Wishbone slaves (memory mapped peripherals)
     wishbone_interface dummy_sram_port();
-    wishbone_interface slaves[11]();
+    wishbone_interface slaves[12]();
 
     // System bus connecting cores to MMIO peripherals
     /* aetherlink */
     aetherlink #(
         .NUM_MASTERS(4),
-        .NUM_SLAVES(11),
+        .NUM_SLAVES(12),
         .SLAVE_ADDRESS
         ({
             TCIM0_START, TCIM1_START, TCIM2_START, TCIM3_START,
             MEMORY_START, BUTTONS_START, LEDS_START, UART_START,
-            TIMER_START, TEST_START, RST_CTRL_START
+            TIMER_START, TEST_START, RST_CTRL_START, SPINLOCK_START
         }),
         .SLAVE_SIZE
         ({
             MEMORY_SIZE, MEMORY_SIZE, MEMORY_SIZE, MEMORY_SIZE,
             MEMORY_SIZE, BUTTONS_SIZE, LEDS_SIZE, UART_SIZE,
-            TIMER_SIZE, TEST_SIZE, RST_CTRL_SIZE
+            TIMER_SIZE, TEST_SIZE, RST_CTRL_SIZE, SPINLOCK_SIZE
         })
         /* Multimaster wishbone interconnect */
     ) aetherlink_interconnect (
@@ -258,6 +258,15 @@ module Titan #(
         .rst(rst),
         .wb(slaves[10].slave),
         .rst_out(rst_out)
+    );
+
+    shikol_wb_spinlock #(
+        .ADDRESS(SPINLOCK_START),
+        .SIZE(SPINLOCK_SIZE)
+    ) spinlock_periph (
+        .clk(clk),
+        .rst(rst),
+        .wb(slaves[11].slave)
     );
 
 endmodule

@@ -14,6 +14,7 @@ defines/clk_params.sv
 -y lib/wishbone
 
 -y external/periph-wb/proloy/design
+-y external/periph-wb/shikol/design
 
 -y ref
 

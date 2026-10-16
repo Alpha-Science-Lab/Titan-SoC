@@ -46,6 +46,9 @@ package constants;
     localparam bit [31:0] RST_CTRL_START = 32'h0012_0100;
     localparam bit [31:0] RST_CTRL_SIZE  = 32'h0000_0001;
 
+    localparam bit [31:0] SPINLOCK_START = 32'h0012_0200;
+    localparam bit [31:0] SPINLOCK_SIZE  = 32'h0000_0020;
+
     // --------------------------------------------------------------------------------------------
     // |                                    Address Constants                                     |
     // --------------------------------------------------------------------------------------------
