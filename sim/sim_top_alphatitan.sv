@@ -6,6 +6,7 @@ module sim_top_alphatitan ();
     integer error_count = 0;
 
     logic clk;
+    logic [15:0] leds;
     logic [4:0] buttons_async = 0;
     logic uart_rx_async = 1;
     logic uart_tx;
@@ -15,6 +16,7 @@ module sim_top_alphatitan ();
         .UART_BAUD_RATE(int'((SYS_CLK_FREQUENCY_MHZ*1_000_000) / 15))
     ) alphatitan_soc (
         .clk(clk),
+        .leds(leds),
         .buttons_async(buttons_async),
         .uart_rx_async(uart_rx_async),
         .uart_tx(uart_tx)

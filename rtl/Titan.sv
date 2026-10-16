@@ -6,13 +6,16 @@
  Author: Md. Mosharrof, Jubayer Fahad
 */
 
-module Titan(
+module Titan #(
     parameter real CLK_FREQUENCY_MHZ,
     parameter int  UART_BAUD_RATE
 ) (
     // Main system clk
     input logic clk,
     
+    // LEDs
+    output logic [15:0] leds,
+
     // Buttons
     input  logic [4:0] buttons_async,
 
@@ -24,14 +27,16 @@ module Titan(
 
     logic [4:0] buttons;
     logic uart_rx;
-    logic [15:0] leds_state;
+    logic [15:0] leds_out;
 
+    logic [15:0] rst_out;
     logic rst = 1;
+
+    assign leds = leds_out;
+
     always_ff @(posedge clk) begin
         rst <= buttons[0];
     end
-
-    logic [15:0] rst_out;
 
     for (genvar i = 0; i < 5; i++) begin : button_conditioning
         synchronizer button_sync(
@@ -57,30 +62,31 @@ module Titan(
     wishbone_interface bus_masters[8]();
 
     // Wishbone slaves (memory mapped peripherals)
-    wishbone_interface slaves[10]();
+    wishbone_interface dummy_sram_port();
+    wishbone_interface slaves[11]();
 
-    // System bus connecting cores to memory-mapped peripherals
-    /* AetherLink */
+    // System bus connecting cores to MMIO peripherals
+    /* aetherlink */
     aetherlink #(
         .NUM_MASTERS(4),
-        .NUM_SLAVES(10),
+        .NUM_SLAVES(11),
         .SLAVE_ADDRESS
         ({
             TCIM0_START, TCIM1_START, TCIM2_START, TCIM3_START,
             MEMORY_START, BUTTONS_START, LEDS_START, UART_START,
-            TIMER_START, TEST_START
+            TIMER_START, TEST_START, RST_CTRL_START
         }),
         .SLAVE_SIZE
         ({
             MEMORY_SIZE, MEMORY_SIZE, MEMORY_SIZE, MEMORY_SIZE,
             MEMORY_SIZE, BUTTONS_SIZE, LEDS_SIZE, UART_SIZE,
-            TIMER_SIZE, TEST_SIZE
+            TIMER_SIZE, TEST_SIZE, RST_CTRL_SIZE
         })
         /* Multimaster wishbone interconnect */
     ) aetherlink_interconnect (
         .clk(clk),
         .rst(rst),
-        .masters(bus_masters[3:0]), 
+        .masters(bus_masters[0:3]), 
         .slaves(slaves)
     );
 
@@ -138,7 +144,8 @@ module Titan(
     // (TCIM 0-3)
     wishbone_ram #(
         .ADDRESS(TCIM0_START),
-        .SIZE(MEMORY_SIZE)
+        .SIZE(MEMORY_SIZE),
+        .INIT_FILE("init.mem")
     ) tcim0 (
         .clk(~clk),
         .rst(rst),
@@ -183,8 +190,8 @@ module Titan(
     ) sram (
         .clk(~clk),
         .rst(rst),
-        .port_a(slaves[4].slave)
-        // port_b is unused
+        .port_a(slaves[4].slave),
+        .port_b(dummy_sram_port.slave) /* unused port */ 
     );
 
     // Wishbone peripherals
@@ -204,7 +211,7 @@ module Titan(
     ) leds_periph (
         .clk(clk),
         .rst(rst),
-        .leds(leds_state),
+        .leds(leds_out),
         .wishbone(slaves[6].slave)
     );
 
@@ -249,7 +256,7 @@ module Titan(
     ) rst_ctrl (
         .clk(clk),
         .rst(rst),
-        .wishbone(slaves[10].slave),
+        .wb(slaves[10].slave),
         .rst_out(rst_out)
     );
 

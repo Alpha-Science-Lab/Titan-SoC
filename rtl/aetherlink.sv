@@ -23,11 +23,17 @@ module aetherlink #(
 
     logic [NUM_MASTERS-1:0] req;
     logic [NUM_MASTERS-1:0] grant_vec;
+    logic [NUM_MASTERS-1:0] master_req, master_cyc, master_stb, master_we;
+    logic [NUM_MASTERS-1:0][31:0] master_adr, master_dat_mosi;
+    logic [NUM_MASTERS-1:0][3:0] master_sel;
     logic [MASTER_IDX_W-1:0] grant_idx_d, grant_idx_q, last_grant_q;
     logic granted_d, granted_q;
 
     logic [NUM_SLAVES-1:0] select;
     logic invalid_address;
+    logic granted_cyc, granted_stb, granted_we;
+    logic [31:0] granted_adr, granted_dat_mosi;
+    logic [3:0] granted_sel;
 
     logic [NUM_SLAVES-1:0] masked_ack, masked_err;
     logic [NUM_SLAVES-1:0][31:0] masked_dat_miso;
@@ -41,16 +47,31 @@ module aetherlink #(
     integer m;
     integer s;
 
+    for (genvar i = 0; i < NUM_MASTERS; i++) begin : master_signals
+        assign master_req[i] = masters[i].cyc && masters[i].stb;
+        assign master_cyc[i] = masters[i].cyc;
+        assign master_stb[i] = masters[i].stb;
+        assign master_we[i] = masters[i].we;
+        assign master_adr[i] = masters[i].adr;
+        assign master_sel[i] = masters[i].sel;
+        assign master_dat_mosi[i] = masters[i].dat_mosi;
+    end
+
     always_comb begin
-        for (m = 0; m < NUM_MASTERS; m++) begin
-            req[m] = masters[m].cyc && masters[m].stb;
-        end
+        req = master_req;
     end
 
     // Round-robin arbiter: choose next requester after last_grant_q
     always_comb begin
         grant_idx_d = grant_idx_q;
         granted_d = granted_q;
+
+        granted_cyc = master_cyc[grant_idx_q];
+        granted_stb = master_stb[grant_idx_q];
+        granted_we  = master_we[grant_idx_q];
+        granted_adr = master_adr[grant_idx_q];
+        granted_sel = master_sel[grant_idx_q];
+        granted_dat_mosi = master_dat_mosi[grant_idx_q];
 
         if (!granted_q) begin
             granted_d = 1'b0;
@@ -63,7 +84,7 @@ module aetherlink #(
                 end
             end
         end
-        else if (done || !masters[grant_idx_q].cyc) begin
+        else if (done || !granted_cyc) begin
             granted_d = 1'b0;
         end
     end
@@ -92,15 +113,14 @@ module aetherlink #(
 
     // Decode slaves for the currently granted master
     for (genvar slave = 0; slave < NUM_SLAVES; slave++) begin
-        assign select[NUM_SLAVES - slave - 1] = &{
-            granted_q,
-            masters[grant_idx_q].cyc,
-            masters[grant_idx_q].adr >= SLAVE_ADDRESS[31 + slave * 32 : slave * 32],
-            masters[grant_idx_q].adr < SLAVE_ADDRESS[31 + slave * 32 : slave * 32] + SLAVE_SIZE[31 + slave * 32 : slave * 32]
-        };
+        assign select[NUM_SLAVES - slave - 1] =
+            granted_q &&
+            granted_cyc &&
+            (granted_adr >= SLAVE_ADDRESS[31 + slave * 32 : slave * 32]) &&
+            (granted_adr < (SLAVE_ADDRESS[31 + slave * 32 : slave * 32] + SLAVE_SIZE[31 + slave * 32 : slave * 32]));
     end
 
-    assign invalid_address = granted_q && masters[grant_idx_q].cyc && masters[grant_idx_q].stb && (select == '0);
+    assign invalid_address = granted_q && granted_cyc && granted_stb && (select == '0);
 
     for (genvar slave = 0; slave < NUM_SLAVES; slave++) begin
         assign masked_dat_miso[slave] = select[slave] ? slaves[slave].dat_miso : '0;
@@ -125,7 +145,7 @@ module aetherlink #(
         else if (done || !granted_q) begin
             timeout_count <= '0;
         end
-        else if (masters[grant_idx_q].cyc && masters[grant_idx_q].stb && (timeout_count < 8'hff)) begin
+        else if (granted_cyc && granted_stb && (timeout_count < 8'hff)) begin
             timeout_count <= timeout_count + 8'd1;
         end
         else begin
@@ -145,12 +165,12 @@ module aetherlink #(
 
     // Forward granted master request to selected slave
     for (genvar slave = 0; slave < NUM_SLAVES; slave++) begin
-        assign slaves[slave].cyc      = granted_q && masters[grant_idx_q].cyc;
-        assign slaves[slave].stb      = granted_q && masters[grant_idx_q].stb && select[slave];
-        assign slaves[slave].adr      = masters[grant_idx_q].adr;
-        assign slaves[slave].sel      = masters[grant_idx_q].sel;
-        assign slaves[slave].we       = masters[grant_idx_q].we;
-        assign slaves[slave].dat_mosi = masters[grant_idx_q].dat_mosi;
+        assign slaves[slave].cyc      = granted_q && granted_cyc;
+        assign slaves[slave].stb      = granted_q && granted_stb && select[slave];
+        assign slaves[slave].adr      = granted_adr;
+        assign slaves[slave].sel      = granted_sel;
+        assign slaves[slave].we       = granted_we;
+        assign slaves[slave].dat_mosi = granted_dat_mosi;
     end
 
 endmodule
