@@ -12,7 +12,7 @@ package constants;
     // |                                   Wishbone Constants                                     |
     // --------------------------------------------------------------------------------------------
     localparam bit [31:0] MEMORY_START = 32'h0005_0000;
-    localparam bit [31:0] MEMORY_SIZE  = 32'h0000_2000;
+    localparam bit [31:0] MEMORY_SIZE  = 32'h0000_0400;
 
     localparam bit [31:0] TCIM0_START  = 32'h0001_0000;
     localparam bit [31:0] TCIM1_START  = 32'h0002_0000;

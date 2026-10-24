@@ -79,7 +79,7 @@ module Titan #(
         .SLAVE_SIZE
         ({
             MEMORY_SIZE, MEMORY_SIZE, MEMORY_SIZE, MEMORY_SIZE,
-            MEMORY_SIZE, BUTTONS_SIZE, LEDS_SIZE, UART_SIZE,
+            MEMORY_SIZE * 2, BUTTONS_SIZE, LEDS_SIZE, UART_SIZE,
             TIMER_SIZE, TEST_SIZE, RST_CTRL_SIZE, SPINLOCK_SIZE
         })
         /* Multimaster wishbone interconnect */
