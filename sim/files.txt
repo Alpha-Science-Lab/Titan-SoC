@@ -15,6 +15,7 @@ defines/clk_params.sv
 
 -y external/periph-wb/proloy/design
 -y external/periph-wb/shikol/design
+-y external/bifrost/rtl
 
 -y ref
 

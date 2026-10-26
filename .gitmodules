@@ -2,3 +2,7 @@
 	path = external/periph-wb
 	url = https://github.com/Alpha-Science-Lab/periph-wb.git
 	branch = main
+[submodule "external/bifrost"]
+	path = external/bifrost
+	url = https://github.com/Alpha-Science-Lab/bifrost.git
+	branch = main

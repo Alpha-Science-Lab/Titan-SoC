@@ -49,6 +49,9 @@ package constants;
     localparam bit [31:0] SPINLOCK_START = 32'h0012_0200;
     localparam bit [31:0] SPINLOCK_SIZE  = 32'h0000_0020;
 
+    localparam bit [31:0] BIFROST_START = 32'h0012_0300;
+    localparam bit [31:0] BIFROST_SIZE  = 32'h0000_0040;
+
     // --------------------------------------------------------------------------------------------
     // |                                    Address Constants                                     |
     // --------------------------------------------------------------------------------------------

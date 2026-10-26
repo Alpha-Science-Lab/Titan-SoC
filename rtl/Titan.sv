@@ -52,55 +52,58 @@ module Titan #(
         .sync_out(uart_rx)
     );
 
+    logic uart_interrupt, dma_interrupt;
     logic [3:0] test_interrupt;
-    logic uart_interrupt;
     logic [3:0] timer_interrupt;
 
 
     // Wishbone bus interfaces for CPU cores
-    /* core0 (4,0) core1 (5,1) core2 (6,2) core3 (7,3) */
-    wishbone_interface bus_masters[8]();
+    // Bus masters 0-3 are for CPU memory ports
+    // Bus master 4 for DMA
+    // Bus masters 8-11 for CPU fetch ports
+    wishbone_interface bus_masters[12]();
 
     // Wishbone slaves (memory mapped peripherals)
+    wishbone_interface slaves[16]();
     wishbone_interface dummy_sram_port();
-    wishbone_interface slaves[12]();
 
     // System bus connecting cores to MMIO peripherals
     /* aetherlink */
     aetherlink #(
-        .NUM_MASTERS(4),
-        .NUM_SLAVES(12),
+        .NUM_MASTERS(8),
+        .NUM_SLAVES(16),
         .SLAVE_ADDRESS
         ({
             TCIM0_START, TCIM1_START, TCIM2_START, TCIM3_START,
             MEMORY_START, BUTTONS_START, LEDS_START, UART_START,
-            TIMER_START, TEST_START, RST_CTRL_START, SPINLOCK_START
+            TIMER_START, TEST_START, RST_CTRL_START, SPINLOCK_START, 
+            BIFROST_START, 32'h0012_0400, 32'h0012_0500, 32'h0012_0600
         }),
         .SLAVE_SIZE
         ({
             MEMORY_SIZE, MEMORY_SIZE, MEMORY_SIZE, MEMORY_SIZE,
             MEMORY_SIZE * 2, BUTTONS_SIZE, LEDS_SIZE, UART_SIZE,
-            TIMER_SIZE, TEST_SIZE, RST_CTRL_SIZE, SPINLOCK_SIZE
+            TIMER_SIZE, TEST_SIZE, RST_CTRL_SIZE, SPINLOCK_SIZE, 
+            BIFROST_SIZE, 32'h0000_0000, 32'h0000_0000, 32'h0000_0000
         })
         /* Multimaster wishbone interconnect */
     ) aetherlink_interconnect (
         .clk(clk),
         .rst(rst),
-        .masters(bus_masters[0:3]), 
+        .masters(bus_masters[0:7]), 
         .slaves(slaves)
     );
 
-
-    // CPU cores
+    // CPU cores (cores 0-3)
     Hadi_V #(
         .RESET_VECTOR(CPU0_RESET_VECTOR),
         .HART_ID(32'h0)
     ) core0 (
         .clk(clk),
         .rst(rst),
-        .memory_fetch_port(bus_masters[4].master),
+        .memory_fetch_port(bus_masters[8].master),
         .memory_mem_port(bus_masters[0].master),
-        .external_interrupt_in(uart_interrupt || test_interrupt[0]),
+        .external_interrupt_in(uart_interrupt || dma_interrupt || test_interrupt[0]),
         .timer_interrupt_in(timer_interrupt[0])
     );
 
@@ -110,7 +113,7 @@ module Titan #(
     ) core1 (
         .clk(clk),
         .rst(rst_out[1]),
-        .memory_fetch_port(bus_masters[5].master),
+        .memory_fetch_port(bus_masters[9].master),
         .memory_mem_port(bus_masters[1].master),
         .external_interrupt_in(test_interrupt[1]),
         .timer_interrupt_in(timer_interrupt[1])
@@ -122,7 +125,7 @@ module Titan #(
     ) core2 (
         .clk(clk),
         .rst(rst_out[2]),
-        .memory_fetch_port(bus_masters[6].master),
+        .memory_fetch_port(bus_masters[10].master),
         .memory_mem_port(bus_masters[2].master),
         .external_interrupt_in(test_interrupt[2]), 
         .timer_interrupt_in(timer_interrupt[2])
@@ -134,12 +137,22 @@ module Titan #(
     ) core3 (
         .clk(clk),
         .rst(rst_out[3]),
-        .memory_fetch_port(bus_masters[7].master),
+        .memory_fetch_port(bus_masters[11].master),
         .memory_mem_port(bus_masters[3].master),
         .external_interrupt_in(test_interrupt[3]), 
         .timer_interrupt_in(timer_interrupt[3])
     );
 
+    bifrost_wb_dma #(
+        .START_ADDRESS(BIFROST_START),
+        .SIZE(BIFROST_SIZE)
+    ) dma_core (
+        .clk(clk),
+        .rst(rst),
+        .intr(dma_interrupt),
+        .wb(slaves[12].slave),
+        .dma(bus_masters[4].master)
+    );
 
     // (TCIM 0-3)
     wishbone_ram #(
@@ -149,7 +162,7 @@ module Titan #(
     ) tcim0 (
         .clk(~clk),
         .rst(rst),
-        .port_a(bus_masters[4].master),
+        .port_a(bus_masters[8].master),
         .port_b(slaves[0].slave)
     );
 
@@ -159,7 +172,7 @@ module Titan #(
     ) tcim1 (
         .clk(~clk),
         .rst(rst),
-        .port_a(bus_masters[5].master),
+        .port_a(bus_masters[9].master),
         .port_b(slaves[1].slave)
     );
 
@@ -169,7 +182,7 @@ module Titan #(
     ) tcim2 (
         .clk(~clk),
         .rst(rst),
-        .port_a(bus_masters[6].master),
+        .port_a(bus_masters[10].master),
         .port_b(slaves[2].slave)
     );
 
@@ -179,7 +192,7 @@ module Titan #(
     ) tcim3 (
         .clk(~clk),
         .rst(rst),
-        .port_a(bus_masters[7].master),
+        .port_a(bus_masters[11].master),
         .port_b(slaves[3].slave)
     );
 
@@ -195,6 +208,7 @@ module Titan #(
     );
 
     // Wishbone peripherals
+
     wishbone_buttons #(
         .ADDRESS(BUTTONS_START),
         .SIZE(BUTTONS_SIZE)
@@ -269,5 +283,6 @@ module Titan #(
         .wb(slaves[11].slave)
     );
 
+    // ~Wishbone peripherals
 endmodule
 
