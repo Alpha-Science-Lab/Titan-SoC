@@ -1,5 +1,5 @@
 
-module sim_top_alphatitan ();
+module top_alphatitan ();
 
     import clk_params::*;
 
@@ -38,14 +38,25 @@ module sim_top_alphatitan ();
         repeat (32) @(posedge clk);
 
         buttons_async = 5'b00000; // release reset
+
+        // Repeatedly press and release button 2
+        forever begin
+            repeat ($urandom_range(900, 1100)) begin
+                @(posedge clk);
+            end
+            buttons_async = 5'b00010; // press button 2
+            
+            repeat (3) @(posedge clk);
+            buttons_async = 5'b00000; // release after 3 cycles
+        end
     end
 
     initial begin
         $dumpfile("sim.fst");
         $dumpvars;
 
-        // Run for 10000000 cycles max
-        repeat (10000000) @(negedge clk);
+        // Run for 10000 cycles max
+        repeat (10000) @(negedge clk);
 
         // Stop simulation
         $display("\033[0;33m"); // color_orange

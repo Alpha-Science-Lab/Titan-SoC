@@ -37,6 +37,9 @@
 #define VGA_START_HALFWORD_ADDRESS    (((volatile uint16_t *) ((0x00090000    ) << 2)))
 #define VGA_START_WORD_ADDRESS        (((volatile uint32_t *) ((0x00090000    ) << 2)))
 #define TEST_ADDRESS                  (((volatile uint32_t *) ((0x00120000    ) << 2)))
+#define RST_CTRL_ADDRESS              (((volatile uint32_t *) ((0x00120100    ) << 2)))
+#define SPINLOCK_ADDRESS              (((volatile uint32_t *) ((0x00120200    ) << 2)))
+#define BIFROST_ADDRESS               (((volatile uint32_t *) ((0x00120300    ) << 2)))
 
 // BUTTONS BIT INDICES
 #define BUTTON_CENTER_IDX  0
