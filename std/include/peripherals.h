@@ -19,6 +19,11 @@
 #include <stdint.h>
 
 // ADDRESSES
+#define MEMORY_ADDRESS                (((volatile uint32_t *) ((0x00050000    ) << 2)))
+#define TCIM0_ADDRESS                 (((volatile uint32_t *) ((0x00010000    ) << 2)))
+#define TCIM1_ADDRESS                 (((volatile uint32_t *) ((0x00020000    ) << 2)))
+#define TCIM2_ADDRESS                 (((volatile uint32_t *) ((0x00030000    ) << 2)))
+#define TCIM3_ADDRESS                 (((volatile uint32_t *) ((0x00040000    ) << 2)))
 #define LEDS_ADDRESS                  (((volatile uint16_t *) ((0x00080000    ) << 2)))
 #define BUTTONS_ADDRESS               (((volatile uint8_t  *) ((0x00081000    ) << 2)))
 #define SWITCHES_ADDRESS              (((volatile uint16_t *) ((0x00082000    ) << 2)))

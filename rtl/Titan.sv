@@ -168,8 +168,7 @@ module Titan #(
 
     wishbone_ram #(
         .ADDRESS(TCIM1_START),
-        .SIZE(MEMORY_SIZE),
-        .INIT_FILE("init.mem")
+        .SIZE(MEMORY_SIZE)
     ) tcim1 (
         .clk(~clk),
         .rst(rst),
@@ -179,8 +178,7 @@ module Titan #(
 
     wishbone_ram #(
         .ADDRESS(TCIM2_START),
-        .SIZE(MEMORY_SIZE),
-        .INIT_FILE("init.mem")
+        .SIZE(MEMORY_SIZE)
     ) tcim2 (
         .clk(~clk),
         .rst(rst),
@@ -190,8 +188,7 @@ module Titan #(
 
     wishbone_ram #(
         .ADDRESS(TCIM3_START),
-        .SIZE(MEMORY_SIZE),
-        .INIT_FILE("init.mem")
+        .SIZE(MEMORY_SIZE)
     ) tcim3 (
         .clk(~clk),
         .rst(rst),
