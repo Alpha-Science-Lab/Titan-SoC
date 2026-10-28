@@ -58,14 +58,26 @@ All harts begin from the same entry point, but each one branches based on `mhart
 The dispatch pattern is:
 
 ```c
-uint32_t hartid = read_csr(mhartid);
+uint32_t hart_id = read_mhartid();
 
-switch (hartid) {
-    case 0: hart0_entry(); break;
-    case 1: hart1_entry(); break;
-    case 2: hart2_entry(); break;
-    case 3: hart3_entry(); break;
-    default: while (1) __asm__ volatile ("nop");
+switch (hart_id) {
+    case 0u:
+        hart0_task();
+        break;
+    case 1u:
+        hart1_task();
+        break;
+    case 2u:
+        hart2_task();
+        break;
+    case 3u:
+        hart3_task();
+        break;
+    default:
+        while (1) {
+            asm volatile ("nop");
+        }
+        break;
 }
 ```
 
@@ -84,18 +96,25 @@ Hart 3 does the following once it exits reset:
 Pseudo-code:
 
 ```c
-void hart3_entry(void)
+void hart3_task(void)
 {
-    while (spinlock_read(SCRATCHPAD_LOCK) != 0) {
+    if (read_mhartid() != 3u) {
+        while (1) {
+            asm volatile ("nop");
+        }
     }
 
-    uint32_t sp = scratchpad_read();
-    sp |= (1u << 31);
-    scratchpad_write(sp);
-    spinlock_write(SCRATCHPAD_LOCK, 0);
+    acquire_spinlock(SPINLOCK_ID);
+
+    uint32_t scratchpad_value = TEST_ADDRESS[SCRATCHPAD_REG_OFFSET];
+    scratchpad_value |= (1u << 31);
+
+    TEST_ADDRESS[SCRATCHPAD_REG_OFFSET] = scratchpad_value;
+
+    release_spinlock(SPINLOCK_ID);
 
     while (1) {
-        __asm__ volatile ("nop");
+        asm volatile ("nop");
     }
 }
 ```
@@ -114,18 +133,25 @@ Hart 2 does the following once it exits reset:
 Pseudo-code:
 
 ```c
-void hart2_entry(void)
+void hart2_task(void)
 {
-    while (spinlock_read(SCRATCHPAD_LOCK) != 0) {
+    if (read_mhartid() != 2u) {
+        while (1) {
+            asm volatile ("nop");
+        }
     }
 
-    uint32_t sp = scratchpad_read();
-    sp |= (1u << 30);
-    scratchpad_write(sp);
-    spinlock_write(SCRATCHPAD_LOCK, 0);
+    acquire_spinlock(SPINLOCK_ID);
+
+    uint32_t scratchpad_value = TEST_ADDRESS[SCRATCHPAD_REG_OFFSET];
+    scratchpad_value |= (1u << 30);
+
+    TEST_ADDRESS[SCRATCHPAD_REG_OFFSET] = scratchpad_value;
+
+    release_spinlock(SPINLOCK_ID);
 
     while (1) {
-        __asm__ volatile ("nop");
+        asm volatile ("nop");
     }
 }
 ```
@@ -144,18 +170,25 @@ Hart 1 does the following once it exits reset:
 Pseudo-code:
 
 ```c
-void hart1_entry(void)
+void hart1_task(void)
 {
-    while (spinlock_read(SCRATCHPAD_LOCK) != 0) {
+    if (read_mhartid() != 1u) {
+        while (1) {
+            asm volatile ("nop");
+        }
     }
 
-    uint32_t sp = scratchpad_read();
-    sp |= (1u << 29);
-    scratchpad_write(sp);
-    spinlock_write(SCRATCHPAD_LOCK, 0);
+    acquire_spinlock(SPINLOCK_ID);
+
+    uint32_t scratchpad_value = TEST_ADDRESS[SCRATCHPAD_REG_OFFSET];
+    scratchpad_value |= (1u << 29);
+
+    TEST_ADDRESS[SCRATCHPAD_REG_OFFSET] = scratchpad_value;
+
+    release_spinlock(SPINLOCK_ID);
 
     while (1) {
-        __asm__ volatile ("nop");
+        asm volatile ("nop");
     }
 }
 ```
@@ -183,23 +216,34 @@ The worker bits therefore act as a combined-ready mask. The master hart checks t
 Pseudo-code:
 
 ```c
-void hart0_entry(void)
+void hart0_task(void)
 {
-    reset_controller_release_others();
+    if (read_mhartid() != 0u) {
+        while (1) {
+            asm volatile ("nop");
+        }
+    }
+
+    TEST_ADDRESS[TEST_REG_OFFSET] = 1u;
+    TEST_ADDRESS[SCRATCHPAD_REG_OFFSET] = 0u;
+
+    bring_harts_out_of_reset_task();
 
     while (1) {
-        uint32_t sp = scratchpad_read();
-
-        if ((sp & 0b111u << 29) == 0b111u << 29) {
-            test_register_write(2);
+        if ((TEST_ADDRESS[SCRATCHPAD_REG_OFFSET] & WORKER_READY_MASK) == WORKER_READY_MASK) {
             break;
         }
 
-        __asm__ volatile ("nop");
+        for (uint32_t i = 0; i < 3; i++) {
+            asm volatile ("nop");
+        }
     }
 
+    TEST_ADDRESS[TEST_REG_OFFSET] = 0u;
+    TEST_ADDRESS[TEST_REG_OFFSET] = 2u;
+
     while (1) {
-        __asm__ volatile ("nop");
+        asm volatile ("nop");
     }
 }
 ```
@@ -220,8 +264,9 @@ In the reduced test, the intended completion pattern is:
 The monitor hart checks the combined condition:
 
 ```c
-if ((scratchpad_read() & (0b111u << 29)) == (0b111u << 29)) {
-    test_register_write(2);
+if ((TEST_ADDRESS[SCRATCHPAD_REG_OFFSET] & WORKER_READY_MASK) == WORKER_READY_MASK) {
+    TEST_ADDRESS[TEST_REG_OFFSET] = 0u;
+    TEST_ADDRESS[TEST_REG_OFFSET] = 2u;
 }
 ```
 
