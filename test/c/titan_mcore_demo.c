@@ -7,6 +7,20 @@
 #define SCRATCHPAD_REG_OFFSET  5u
 #define TEST_REG_OFFSET        0u
 
+#define DMA_NUM_BOOT_WORDS     1024u
+#define DMA_CHANNEL_STRIDE     8u
+
+#define DMA_REG_CTRL           0u
+#define DMA_REG_SRC_ADDR       1u
+#define DMA_REG_DST_ADDR       2u
+#define DMA_REG_LEN            3u
+#define DMA_REG_STATUS         4u
+
+#define DMA_CTRL_START         (1u << 0)
+
+#define DMA_STATUS_DONE        (1u << 1)
+#define DMA_STATUS_ERROR       (1u << 2)
+
 static inline uint32_t read_mhartid(void) {
 	uint32_t hartid;
 	asm volatile ("csrr %0, mhartid" : "=r"(hartid));
@@ -20,6 +34,27 @@ static inline void acquire_spinlock(uint32_t lock_id) {
 
 static inline void release_spinlock(uint32_t lock_id) {
 	SPINLOCK_ADDRESS[lock_id] = 0u;
+}
+
+static inline uint32_t dma_reg_offset(uint32_t channel, uint32_t reg) {
+	return (channel * DMA_CHANNEL_STRIDE) + reg;
+}
+
+static void dma_start_copy(uint32_t channel, uint32_t src_addr, uint32_t dst_addr, uint32_t len_words) {
+	BIFROST_ADDRESS[dma_reg_offset(channel, DMA_REG_SRC_ADDR)] = src_addr;
+	BIFROST_ADDRESS[dma_reg_offset(channel, DMA_REG_DST_ADDR)] = dst_addr;
+	BIFROST_ADDRESS[dma_reg_offset(channel, DMA_REG_LEN)] = len_words;
+	BIFROST_ADDRESS[dma_reg_offset(channel, DMA_REG_CTRL)] = DMA_CTRL_START;
+}
+
+static uint32_t dma_wait_done_or_error(uint32_t channel) {
+	uint32_t status;
+
+	do {
+		status = BIFROST_ADDRESS[dma_reg_offset(channel, DMA_REG_STATUS)];
+	} while ((status & (DMA_STATUS_DONE | DMA_STATUS_ERROR)) == 0u);
+
+	return status;
 }
 
 static void uart_putc(char c) {
@@ -44,6 +79,40 @@ static void mirror_boot_img_over_tcims(void) {
         TCIM2_ADDRESS[i] = word_copied;
         TCIM3_ADDRESS[i] = word_copied;
     }
+}
+
+static void mirror_boot_img_over_tcims_dma(void) {
+    
+	// CPU pointers are byte addresses; DMA expects Wishbone word addresses
+	const uint32_t src = ((uint32_t)(uintptr_t)TCIM0_ADDRESS) >> 2;
+
+	dma_start_copy(
+		0u,
+		src, 
+		((uint32_t)(uintptr_t)TCIM1_ADDRESS) >> 2, 
+		DMA_NUM_BOOT_WORDS
+	);
+	dma_start_copy(
+		1u,
+		src,
+		((uint32_t)(uintptr_t)TCIM2_ADDRESS) >> 2,
+		DMA_NUM_BOOT_WORDS
+	);
+	dma_start_copy(
+		2u,
+		src,
+		((uint32_t)(uintptr_t)TCIM3_ADDRESS) >> 2,
+		DMA_NUM_BOOT_WORDS
+	);
+
+	const uint32_t st0 = dma_wait_done_or_error(0u);
+	const uint32_t st1 = dma_wait_done_or_error(1u);
+	const uint32_t st2 = dma_wait_done_or_error(2u);
+
+	if (((st0 | st1 | st2) & DMA_STATUS_ERROR) != 0u) {
+		// terminate if any DMA error occurs
+		TEST_ADDRESS[TEST_REG_OFFSET] = 2u;
+	}
 }
 
 static void initialize_shared_data_ram(void) {
@@ -85,7 +154,7 @@ static void hart0_task(void) {
     // the remaining harts can boot even when their own TCIMs are not preloaded
     acquire_spinlock(SPINLOCK_IMEM);
     uart_puts("Hart 0: mirroring boot image over TCIMs\r\n");
-    mirror_boot_img_over_tcims();
+	mirror_boot_img_over_tcims_dma();
 
     TEST_ADDRESS[TEST_REG_OFFSET] = 1u;
     TEST_ADDRESS[SCRATCHPAD_REG_OFFSET] = 0u;
