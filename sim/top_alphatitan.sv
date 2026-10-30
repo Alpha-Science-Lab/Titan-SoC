@@ -19,6 +19,8 @@ module top_alphatitan ();
     logic [7:0] uart_rx_line_buf [0:255];
     integer uart_rx_line_len = 0;
     logic [15:0] leds_prev = '0;
+    logic spi_fmem_sclk, spi_fmem_mosi,
+     spi_fmem_miso, spi_fmem_cs;
     
     Titan #(
         .CLK_FREQUENCY_MHZ(SYS_CLK_FREQUENCY_MHZ),
@@ -28,10 +30,23 @@ module top_alphatitan ();
         .leds(leds),
         .buttons_async(buttons_async),
         .uart_rx_async(uart_rx_async),
-        .uart_tx(uart_tx)
+        .uart_tx(uart_tx),
+        .spi0_sclk(spi_fmem_sclk),
+        .spi0_mosi(spi_fmem_mosi),
+        .spi0_miso(spi_fmem_miso),
+        .spi0_cs_n(spi_fmem_cs)
     );
 
-    // Reuse existing UART RX logic to decode bytes from DUT TX line
+    ext_flash flash_mem (
+        .rst(buttons_async[0]),
+        .sclk(spi_fmem_sclk),
+        .mosi(spi_fmem_mosi),
+        .miso(spi_fmem_miso),
+        .cs(spi_fmem_cs)
+    );
+
+    /* Reuse existing UART RX logic to decode bytes
+        from DUT TX line */
     uart_rx #(
         .CLKS_PER_BIT(UART_CLKS_PER_BIT)
     ) uart_tx_monitor (
@@ -175,7 +190,6 @@ module top_alphatitan ();
             $display("(%6d ps) Scratchpad: 0x%08h", 
                 $time(), alphatitan_soc.test_periph.scratchpad_reg);
             $display("\033[0m"); // color off
-
         end
 
     end

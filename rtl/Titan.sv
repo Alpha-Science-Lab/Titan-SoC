@@ -21,7 +21,24 @@ module Titan #(
 
     // UART
     input  logic uart_rx_async,
-    output logic uart_tx
+    output logic uart_tx,
+
+    input  logic i2c_scl_i,
+    output logic i2c_scl_o,
+    output logic i2c_scl_oe,
+    input  logic i2c_sda_i,
+    output logic i2c_sda_o,
+    output logic i2c_sda_oe,
+
+    output logic spi0_sclk,
+    output logic spi0_mosi,
+    input  logic spi0_miso,
+    output logic spi0_cs_n,
+
+    output logic spi1_sclk,
+    output logic spi1_mosi,
+    input  logic spi1_miso,
+    output logic [7:0] spi1_cs_n
 );
     import constants::*;
 
@@ -33,7 +50,7 @@ module Titan #(
     logic rst = 1;
 
     assign leds = leds_out;
-
+    
     always_ff @(posedge clk) begin
         rst <= buttons[0];
     end
@@ -52,7 +69,7 @@ module Titan #(
         .sync_out(uart_rx)
     );
 
-    logic uart_interrupt, dma_interrupt;
+    logic uart_interrupt, dma_interrupt, i2c_intr, spi0_intr, spi1_intr;
     logic [3:0] test_interrupt;
     logic [3:0] timer_interrupt;
 
@@ -76,15 +93,15 @@ module Titan #(
         ({
             TCIM0_START, TCIM1_START, TCIM2_START, TCIM3_START,
             MEMORY_START, BUTTONS_START, LEDS_START, UART_START,
-            TIMER_START, TEST_START, RST_CTRL_START, SPINLOCK_START, 
-            BIFROST_START, 32'h0012_0400, 32'h0012_0500, 32'h0012_0600
+            TIMER_START, I2C_START, SPI0_START, SPI1_START, TEST_START,
+            RST_CTRL_START, SPINLOCK_START, BIFROST_START
         }),
         .SLAVE_SIZE
         ({
             MEMORY_SIZE, MEMORY_SIZE, MEMORY_SIZE, MEMORY_SIZE,
             MEMORY_SIZE * 2, BUTTONS_SIZE, LEDS_SIZE, UART_SIZE,
-            TIMER_SIZE, TEST_SIZE, RST_CTRL_SIZE, SPINLOCK_SIZE, 
-            BIFROST_SIZE, 32'h0000_0000, 32'h0000_0000, 32'h0000_0000
+            TIMER_SIZE, I2C_SIZE, SPI_SIZE, SPI_SIZE, TEST_SIZE,
+            RST_CTRL_SIZE, SPINLOCK_SIZE, BIFROST_SIZE
         })
         /* Multimaster wishbone interconnect */
     ) aetherlink_interconnect (
@@ -103,7 +120,7 @@ module Titan #(
         .rst(rst),
         .memory_fetch_port(bus_masters[8].master),
         .memory_mem_port(bus_masters[0].master),
-        .external_interrupt_in(uart_interrupt || dma_interrupt || test_interrupt[0]),
+        .external_interrupt_in(uart_interrupt || spi0_intr || dma_interrupt || test_interrupt[0]),
         .timer_interrupt_in(timer_interrupt[0])
     );
 
@@ -139,7 +156,7 @@ module Titan #(
         .rst(rst_out[3]),
         .memory_fetch_port(bus_masters[11].master),
         .memory_mem_port(bus_masters[3].master),
-        .external_interrupt_in(test_interrupt[3]), 
+        .external_interrupt_in(uart_interrupt || i2c_intr || spi1_intr || test_interrupt[3]), 
         .timer_interrupt_in(timer_interrupt[3])
     );
 
@@ -150,7 +167,7 @@ module Titan #(
         .clk(clk),
         .rst(rst),
         .intr(dma_interrupt),
-        .wb(slaves[12].slave),
+        .wb(slaves[15].slave),
         .dma(bus_masters[4].master)
     );
 
@@ -254,6 +271,58 @@ module Titan #(
         .wishbone(slaves[8].slave)
     );
 
+    dotara_wb_i2c #(
+        .START_ADDRESS(I2C_START),
+        .SIZE(I2C_SIZE),
+        .FIFO_DEPTH(16),
+        .DEFAULT_PRESCALER(16'd45)
+    ) wb_i2c (
+        .clk(clk),
+        .rst(rst),
+        .wb(slaves[9].slave),
+        .intr(i2c_intr),
+        .scl_pad_i(i2c_scl_i),
+        .scl_pad_o(i2c_scl_o),
+        .scl_padoen_o(i2c_scl_oe),
+        .sda_pad_i(i2c_sda_i),
+        .sda_pad_o(i2c_sda_o),
+        .sda_padoen_o(i2c_sda_oe)
+    );
+
+    karnaphuli_wb_spi #( /*for external spi flash*/
+        .START_ADDRESS(SPI0_START),
+        .SIZE(SPI_SIZE),
+        .NUM_SLAVES(1),
+        .FIFO_DEPTH(256),
+        .DEFAULT_PRESCALER(16'd2)
+    ) wb_spi0 (
+        .clk(clk),
+        .rst(rst),
+        .wb(slaves[10].slave),
+        .intr(spi0_intr),
+        .spi_sclk(spi0_sclk),
+        .spi_mosi(spi0_mosi),
+        .spi_miso(spi0_miso),
+        .spi_cs_n(spi0_cs_n)
+    );
+
+    karnaphuli_wb_spi #(
+        .START_ADDRESS(SPI1_START),
+        .SIZE(SPI_SIZE),
+        .NUM_SLAVES(8),
+        .FIFO_DEPTH(64),
+        .DEFAULT_PRESCALER(16'd7)
+    ) wb_spi1 (
+        .clk(clk),
+        .rst(rst),
+        .wb(slaves[11].slave),
+        .intr(spi1_intr),
+        .spi_sclk(spi1_sclk),
+        .spi_mosi(spi1_mosi),
+        .spi_miso(spi1_miso),
+        .spi_cs_n(spi1_cs_n)
+    );
+
     wishbone_test #(
         .ADDRESS(TEST_START),
         .SIZE(TEST_SIZE)
@@ -261,7 +330,7 @@ module Titan #(
         .clk(clk),
         .rst(rst),
         .interrupt(test_interrupt),
-        .wishbone(slaves[9].slave)
+        .wishbone(slaves[12].slave)
     );
 
     proloy_wb_rst #(
@@ -270,7 +339,7 @@ module Titan #(
     ) rst_ctrl (
         .clk(clk),
         .rst(rst),
-        .wb(slaves[10].slave),
+        .wb(slaves[13].slave),
         .rst_out(rst_out)
     );
 
@@ -280,7 +349,7 @@ module Titan #(
     ) spinlock_periph (
         .clk(clk),
         .rst(rst),
-        .wb(slaves[11].slave)
+        .wb(slaves[14].slave)
     );
 
     // ~Wishbone peripherals
