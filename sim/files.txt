@@ -16,8 +16,11 @@ defines/clk_params.sv
 -y external/bifrost/rtl
 -y external/periph-wb/dotara/design
 -y external/periph-wb/karnaphuli/design
+-y external/periph-wb/brahmaputra/design
 -y external/periph-wb/proloy/design
 -y external/periph-wb/shikol/design
+
+sim/boot_rom.sv
 
 -y rtl
 

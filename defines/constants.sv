@@ -3,6 +3,9 @@
  * SPDX-License-Identifier: MIT
  * ---------------------------------------------------------------------
  * File: constants.sv
+ *
+ * Modified by Md Monjurul Islam, Md Jubaer Fahad (Introduce DMA, Boot ROM, and other peripherals)
+ * Alpha Scale Lab, October 2026
  */
 
 /*verilator lint_off UNUSED*/
@@ -13,6 +16,9 @@ package constants;
     // --------------------------------------------------------------------------------------------
     localparam bit [31:0] MEMORY_START = 32'h0005_0000;
     localparam bit [31:0] MEMORY_SIZE  = 32'h0000_0400;
+
+    localparam bit [31:0] ROM_START = 32'h0005_1000;
+    localparam bit [31:0] ROM_SIZE  = 32'h0000_0200;
 
     localparam bit [31:0] TCIM0_START  = 32'h0001_0000;
     localparam bit [31:0] TCIM1_START  = 32'h0002_0000;
@@ -43,6 +49,9 @@ package constants;
     localparam bit [31:0] SPI0_START = 32'h0008_5400;
     localparam bit [31:0] SPI1_START = 32'h0008_5500;
     localparam bit [31:0] SPI_SIZE  = 32'h0000_0006;
+
+    localparam bit [31:0] GPIO_START = 32'h0008_5600;
+    localparam bit [31:0] GPIO_SIZE  = 32'h0000_0017;
 
     localparam bit [31:0] VGA_START = 32'h0009_0000;
     localparam bit [31:0] VGA_SIZE  = 32'h0000_9600; // 640 * 480 pixel with 4 bit color depth
