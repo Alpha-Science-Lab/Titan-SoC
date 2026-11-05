@@ -15,10 +15,10 @@ package constants;
     // |                                   Wishbone Constants                                     |
     // --------------------------------------------------------------------------------------------
     localparam bit [31:0] MEMORY_START = 32'h0005_0000;
-    localparam bit [31:0] MEMORY_SIZE  = 32'h0000_0400;
+    localparam bit [31:0] MEMORY_SIZE  = 32'h0000_0800;
 
     localparam bit [31:0] ROM_START = 32'h0005_1000;
-    localparam bit [31:0] ROM_SIZE  = 32'h0000_0200;
+    localparam bit [31:0] ROM_SIZE  = 32'h0000_0800;
 
     localparam bit [31:0] TCIM0_START  = 32'h0001_0000;
     localparam bit [31:0] TCIM1_START  = 32'h0002_0000;
@@ -71,7 +71,7 @@ package constants;
     // --------------------------------------------------------------------------------------------
     // |                                    Address Constants                                     |
     // --------------------------------------------------------------------------------------------
-    localparam bit [31:0] CPU0_RESET_VECTOR = TCIM0_START << 2;
+    localparam bit [31:0] CPU0_RESET_VECTOR = ROM_START << 2;
     localparam bit [31:0] CPU1_RESET_VECTOR = TCIM1_START << 2;
     localparam bit [31:0] CPU2_RESET_VECTOR = TCIM2_START << 2;
     localparam bit [31:0] CPU3_RESET_VECTOR = TCIM3_START << 2;

@@ -11,7 +11,7 @@ ENTRY(__reset)
 /*
  */
 MEMORY {
-    RAM (rwx) : ORIGIN = 0x40000, LENGTH = 4k
+    RAM (rwx) : ORIGIN = 0x40000, LENGTH = 8k
 }
 
 /*
@@ -61,7 +61,7 @@ SECTIONS {
     } > RAM
     
     /* Place every symbol in boot_internal.o at the end of RAM, but place the actual bytes here. */
-    .boot (__ram_end - 512) : {
+    .boot (__ram_end - 1k) : {
         *boot_internal.o
         . = ALIGN(4);
     } AT> RAM
@@ -103,7 +103,7 @@ SECTIONS {
     } > RAM
 
     /* Allocate memory for stack and (optional) bootloader. */
-    .reserved (__ram_end - 512) : {
-        . = . + 512;
+    .reserved (__ram_end - 1k) : {
+        . = . + 1k;
     }
 }

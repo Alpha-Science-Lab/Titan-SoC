@@ -62,40 +62,50 @@ module Titan #(
 
     // Wishbone slaves (memory mapped peripherals)
     wishbone_interface slaves[16]();
-    wishbone_interface dummy_sram_port();
+    wishbone_interface hart0_fetch_port_slaves[2]();
+    wishbone_interface unused_port();
 
-    // System bus connecting cores to MMIO peripherals
-    /* aetherlink */
     aetherlink #(
         .NUM_MASTERS(8),
         .NUM_SLAVES(16),
         .SLAVE_ADDRESS
         ({
             TCIM0_START, TCIM1_START, TCIM2_START, TCIM3_START, 
-            MEMORY_START, ROM_START, UART_START, TIMER_START, 
+            MEMORY_START, 32'hFFFF_FFFF, UART_START, TIMER_START, 
             I2C_START, SPI0_START, SPI1_START, GPIO_START, 
             TEST_START, RST_CTRL_START, SPINLOCK_START, BIFROST_START
         }),
         .SLAVE_SIZE
         ({
             MEMORY_SIZE, MEMORY_SIZE, MEMORY_SIZE, MEMORY_SIZE, 
-            MEMORY_SIZE * 2, ROM_SIZE, UART_SIZE, TIMER_SIZE, 
+            MEMORY_SIZE * 2, 32'h0, UART_SIZE, TIMER_SIZE, 
             I2C_SIZE, SPI_SIZE, SPI_SIZE, GPIO_SIZE, 
             TEST_SIZE, RST_CTRL_SIZE, SPINLOCK_SIZE, BIFROST_SIZE
         })
         /* Multimaster wishbone interconnect */
-    ) aetherlink_interconnect (
+    ) aether_mmio_fabric (
         .clk(clk),
         .rst(rst),
         .masters(bus_masters[0:7]), 
         .slaves(slaves)
     );
 
+    wishbone_interconnect #(
+        .NUM_SLAVES(2),
+        .SLAVE_ADDRESS({TCIM0_START, ROM_START}),
+        .SLAVE_SIZE({MEMORY_SIZE , ROM_SIZE})
+    ) hart0_memory_fabric (
+        .clk(clk),
+        .rst(rst),
+        .master(bus_masters[8]),
+        .slaves(hart0_fetch_port_slaves)
+    );
+
     // CPU cores (cores 0-3)
     Hadi_V #(
         .RESET_VECTOR(CPU0_RESET_VECTOR),
         .HART_ID(32'h0)
-    ) core0 (
+    ) hart0 (
         .clk(clk),
         .rst(rst),
         .memory_fetch_port(bus_masters[8].master),
@@ -107,7 +117,7 @@ module Titan #(
     Hadi_V #(
         .RESET_VECTOR(CPU1_RESET_VECTOR),
         .HART_ID(32'h1)
-    ) core1 (
+    ) hart1 (
         .clk(clk),
         .rst(rst_reg[1]),
         .memory_fetch_port(bus_masters[9].master),
@@ -119,7 +129,7 @@ module Titan #(
     Hadi_V #(
         .RESET_VECTOR(CPU2_RESET_VECTOR),
         .HART_ID(32'h2)
-    ) core2 (
+    ) hart2 (
         .clk(clk),
         .rst(rst_reg[2]),
         .memory_fetch_port(bus_masters[10].master),
@@ -131,7 +141,7 @@ module Titan #(
     Hadi_V #(
         .RESET_VECTOR(CPU3_RESET_VECTOR),
         .HART_ID(32'h3)
-    ) core3 (
+    ) hart3 (
         .clk(clk),
         .rst(rst_reg[3]),
         .memory_fetch_port(bus_masters[11].master),
@@ -147,7 +157,7 @@ module Titan #(
         .clk(clk),
         .rst(rst),
         .intr(dma_interrupt),
-        .wb(slaves[15].slave),
+        .wb(slaves[15]),
         .dma(bus_masters[4].master)
     );
 
@@ -159,8 +169,8 @@ module Titan #(
     ) tcim0 (
         .clk(~clk),
         .rst(rst),
-        .port_a(bus_masters[8].master),
-        .port_b(slaves[0].slave)
+        .port_a(hart0_fetch_port_slaves[0]),
+        .port_b(slaves[0])
     );
 
     wishbone_ram #(
@@ -169,8 +179,8 @@ module Titan #(
     ) tcim1 (
         .clk(~clk),
         .rst(rst),
-        .port_a(bus_masters[9].master),
-        .port_b(slaves[1].slave)
+        .port_a(bus_masters[9].slave),
+        .port_b(slaves[1])
     );
 
     wishbone_ram #(
@@ -179,8 +189,8 @@ module Titan #(
     ) tcim2 (
         .clk(~clk),
         .rst(rst),
-        .port_a(bus_masters[10].master),
-        .port_b(slaves[2].slave)
+        .port_a(bus_masters[10].slave),
+        .port_b(slaves[2])
     );
 
     wishbone_ram #(
@@ -189,8 +199,8 @@ module Titan #(
     ) tcim3 (
         .clk(~clk),
         .rst(rst),
-        .port_a(bus_masters[11].master),
-        .port_b(slaves[3].slave)
+        .port_a(bus_masters[11].slave),
+        .port_b(slaves[3])
     );
 
     // Shared SRAM
@@ -200,19 +210,19 @@ module Titan #(
     ) sram (
         .clk(~clk),
         .rst(rst),
-        .port_a(slaves[4].slave),
-        .port_b(dummy_sram_port.slave) /* unused port */ 
+        .port_a(slaves[4]),
+        .port_b(unused_port) /* dummy port */ 
     );
 
     // Boot ROM
     boot_rom #(
         .ADDRESS(ROM_START),
         .SIZE(ROM_SIZE),
-        .INIT_FILE("boot_rom.mem")
+        .INIT_FILE("init.mem")
     ) boot_rom (
         .clk(~clk),
         .rst(rst),
-        .wb(slaves[5].slave)
+        .wb(hart0_fetch_port_slaves[1])
     );
 
     // Wishbone peripherals
@@ -228,7 +238,7 @@ module Titan #(
         .rx_serial_in(gpio_uart_rx),
         .tx_serial_out(uart_tx_gpio),
         .interrupt(uart_interrupt),
-        .wishbone(slaves[6].slave)
+        .wishbone(slaves[6])
     );
 
     wishbone_timer #(
@@ -239,7 +249,7 @@ module Titan #(
         .clk(clk),
         .rst(rst),
         .interrupt(timer_interrupt),
-        .wishbone(slaves[7].slave)
+        .wishbone(slaves[7])
     );
 
     dotara_wb_i2c #(
@@ -250,7 +260,7 @@ module Titan #(
     ) wb_i2c (
         .clk(clk),
         .rst(rst),
-        .wb(slaves[8].slave),
+        .wb(slaves[8]),
         .intr(i2c_intr),
         .scl_pad_i(gpio_i2c_scl_i),
         .scl_pad_o(i2c_scl_o_gpio),
@@ -269,7 +279,7 @@ module Titan #(
     ) wb_spi0 (
         .clk(clk),
         .rst(rst),
-        .wb(slaves[9].slave),
+        .wb(slaves[9]),
         .intr(spi0_intr),
         .spi_sclk(spi0_sclk),
         .spi_mosi(spi0_mosi),
@@ -286,7 +296,7 @@ module Titan #(
     ) wb_spi1 (
         .clk(clk),
         .rst(rst),
-        .wb(slaves[10].slave),
+        .wb(slaves[10]),
         .intr(spi1_intr),
         .spi_sclk(spi1_sclk_gpio),
         .spi_mosi(spi1_mosi_gpio),
@@ -300,7 +310,7 @@ module Titan #(
     ) wb_gpio (
         .clk(clk),
         .rst(rst),
-        .wb(slaves[11].slave),
+        .wb(slaves[11]),
         // gpio facing outside world
         .gpioa(gpioa),
         .gpiob(gpiob),
@@ -334,7 +344,7 @@ module Titan #(
         .clk(clk),
         .rst(rst),
         .interrupt(test_interrupt),
-        .wishbone(slaves[12].slave)
+        .wishbone(slaves[12])
     );
 
     proloy_wb_rst #(
@@ -343,7 +353,7 @@ module Titan #(
     ) rst_ctrl (
         .clk(clk),
         .rst(rst),
-        .wb(slaves[13].slave),
+        .wb(slaves[13]),
         .rst_out(rst_reg)
     );
 
@@ -353,7 +363,7 @@ module Titan #(
     ) spinlock_periph (
         .clk(clk),
         .rst(rst),
-        .wb(slaves[14].slave)
+        .wb(slaves[14])
     );
 
 endmodule

@@ -6,6 +6,7 @@ module boot_rom #(
 )(
     input logic clk,
     input logic rst,
+    
     wishbone_interface.slave wb
 );
 
